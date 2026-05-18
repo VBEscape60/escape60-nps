@@ -85,4 +85,131 @@
 <script>
 const URL  = 'https://fgozipigrjmlvzptilzb.supabase.co';
 const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnb3ppcGlncmptbHZ6cHRpbHpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1OTgwODIsImV4cCI6MjA2ODE3NDA4Mn0.lK4zJHJiFY_mZDazSUwauzylCJhHqsSGqTaGJuEPe5E';
-const UNITS = ['VO','
+const UNITS = ['VO','HS','MO','TT','JD','CP'];
+
+let all = [], filter = 'hoje', chart = null;
+
+function setFilter(f, el) {
+  filter = f;
+  document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function getData() {
+  const unit = document.getElementById('unitSel').value;
+  const now = new Date();
+  let d = unit ? all.filter(r => r.unidade === unit) : all;
+  if (filter === 'hoje') { const t = now.toISOString().slice(0,10); d = d.filter(r => r.data_avaliacao?.slice(0,10) === t); }
+  else if (filter === 'semana') { const c = new Date(now-7*864e5).toISOString(); d = d.filter(r => r.data_avaliacao >= c); }
+  else if (filter === 'mes') { const c = new Date(now-30*864e5).toISOString(); d = d.filter(r => r.data_avaliacao >= c); }
+  return d;
+}
+
+function nps(d) {
+  if (!d.length) return null;
+  const p = d.filter(r => r.avaliacao >= 9).length;
+  const dt = d.filter(r => r.avaliacao <= 6).length;
+  return Math.round((p/d.length - dt/d.length)*100);
+}
+
+function color(v) {
+  if (v === null) return '#555';
+  return v >= 50 ? '#22c55e' : v >= 0 ? '#f59e0b' : '#ef4444';
+}
+
+function ago(ts) {
+  const s = (Date.now() - new Date(ts))/1000;
+  if (s < 60) return `${Math.floor(s)}s atrás`;
+  if (s < 3600) return `${Math.floor(s/60)}min atrás`;
+  if (s < 86400) return `${Math.floor(s/3600)}h atrás`;
+  return new Date(ts).toLocaleDateString('pt-BR');
+}
+
+function cls(s) { return s >= 9 ? 'Promotor' : s >= 7 ? 'Neutro' : 'Detrator'; }
+
+function render() {
+  const d = getData();
+  const n = nps(d), total = d.length;
+  const p = d.filter(r => r.avaliacao >= 9).length;
+  const nt = d.filter(r => r.avaliacao >= 7 && r.avaliacao <= 8).length;
+  const dt = d.filter(r => r.avaliacao <= 6).length;
+  const pct = v => total ? Math.round(v/total*100) : 0;
+
+  const unitCards = UNITS.map(u => {
+    let ud = all.filter(r => r.unidade === u);
+    const now = new Date();
+    if (filter === 'hoje') { const t = now.toISOString().slice(0,10); ud = ud.filter(r => r.data_avaliacao?.slice(0,10) === t); }
+    else if (filter === 'semana') { const c = new Date(now-7*864e5).toISOString(); ud = ud.filter(r => r.data_avaliacao >= c); }
+    else if (filter === 'mes') { const c = new Date(now-30*864e5).toISOString(); ud = ud.filter(r => r.data_avaliacao >= c); }
+    const un = nps(ud), up = ud.filter(r=>r.avaliacao>=9).length, unu = ud.filter(r=>r.avaliacao>=7&&r.avaliacao<=8).length, udt = ud.filter(r=>r.avaliacao<=6).length;
+    return `<div class="unit">
+      <div class="unit-name">${u}</div>
+      <div class="unit-nps" style="color:${color(un)}">${un===null?'—':(un>0?'+':'')+un}</div>
+      <div class="unit-count">${ud.length} respostas</div>
+      <div class="bar"><div class="bar-p" style="flex:${up}"></div><div class="bar-n" style="flex:${unu}"></div><div class="bar-d" style="flex:${udt}"></div></div>
+    </div>`;
+  }).join('');
+
+  const labels=[], vals=[];
+  for(let i=6;i>=0;i--){
+    const day = new Date(Date.now()-i*864e5);
+    labels.push(day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+    const key = day.toISOString().slice(0,10);
+    const unit = document.getElementById('unitSel').value;
+    const dd = all.filter(r=>(unit?r.unidade===unit:true)&&r.data_avaliacao?.slice(0,10)===key);
+    vals.push(nps(dd));
+  }
+
+  const feed = [...d].sort((a,b)=>new Date(b.data_avaliacao)-new Date(a.data_avaliacao)).slice(0,8);
+
+  document.getElementById('app').innerHTML = `
+    <div class="metrics">
+      <div class="card"><div class="card-label">NPS Geral</div><div class="card-value" style="color:${color(n)}">${n===null?'—':(n>0?'+':'')+n}</div><div class="card-sub">${total} respostas</div></div>
+      <div class="card"><div class="card-label">Promotores</div><div class="card-value green">${p}</div><div class="card-sub">${pct(p)}%</div></div>
+      <div class="card"><div class="card-label">Neutros</div><div class="card-value yellow">${nt}</div><div class="card-sub">${pct(nt)}%</div></div>
+      <div class="card"><div class="card-label">Detratores</div><div class="card-value red">${dt}</div><div class="card-sub">${pct(dt)}%</div></div>
+    </div>
+    <div class="section-title">Por unidade</div>
+    <div class="units">${unitCards}</div>
+    <div class="chart-box">
+      <div class="section-title" style="margin-bottom:12px">Evolução — últimos 7 dias</div>
+      <div class="chart-wrap"><canvas id="ch" role="img" aria-label="Evolução do NPS nos últimos 7 dias">Gráfico NPS 7 dias.</canvas></div>
+    </div>
+    <div class="section-title">Últimas respostas</div>
+    <div class="feed-box">
+      ${feed.length ? feed.map(r=>{
+        const c=cls(r.avaliacao), sc=c==='Promotor'?'sp':c==='Neutro'?'sn':'sd', tg=c==='Promotor'?'tp':c==='Neutro'?'tn':'td';
+        return `<div class="feed-item"><div class="score-badge ${sc}">${r.avaliacao}</div><div style="flex:1"><div class="feed-unit">${r.unidade||'—'}</div><div class="feed-time">${ago(r.data_avaliacao)}</div></div><span class="tag ${tg}">${c}</span></div>`;
+      }).join('') : '<div class="empty">Sem respostas no período</div>'}
+    </div>
+    <div class="footer">Atualizado às ${new Date().toLocaleTimeString('pt-BR')} · refresh a cada 30s</div>
+  `;
+
+  if(chart){chart.destroy();chart=null;}
+  const ctx = document.getElementById('ch');
+  if(ctx) chart = new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets:[{label:'NPS',data:vals,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.08)',borderWidth:2,pointBackgroundColor:vals.map(v=>color(v)),pointRadius:5,tension:.3,fill:true,spanGaps:true}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:-100,max:100,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#555',font:{size:11},callback:v=>v>0?'+'+v:v}},x:{grid:{display:false},ticks:{color:'#555',font:{size:11},autoSkip:false}}}}
+  });
+}
+
+async function load() {
+  try {
+    const res = await fetch(`${URL}/rest/v1/Avaliacoes?select=avaliacao,data_avaliacao,unidade&order=data_avaliacao.desc&limit=5000`,{
+      headers:{'apikey':KEY,'Authorization':`Bearer ${KEY}`}
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    all = await res.json();
+    render();
+  } catch(e) {
+    document.getElementById('app').innerHTML = `<div class="error">Erro ao conectar: ${e.message}</div>`;
+  }
+}
+
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>

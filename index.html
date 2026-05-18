@@ -98,6 +98,14 @@ const UNITS = ['VO','HS','MO','TT','JD','CA'];
 
 let all = [], filter = '15d', chart = null;
 
+function parseData(str) {
+  if (!str) return new Date(0);
+  const [data, hora] = str.split(' ');
+  const [ano, mes, dia] = data.split('-').map(Number);
+  const [h, min, s] = (hora || '00:00:00').split(':').map(Number);
+  return new Date(ano, mes - 1, dia, h, min, s);
+}
+
 function setFilter(f, el) {
   filter = f;
   document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
@@ -106,26 +114,28 @@ function setFilter(f, el) {
 }
 
 function getCutoff() {
-  const now = new Date();
-  if (filter === '15d') return new Date(now - 15*864e5);
-  if (filter === '30d') return new Date(now - 30*864e5);
-  if (filter === 'ano') return new Date(now.getFullYear(), 0, 1);
+  const agora = new Date();
+  if (filter === '15d') { const d = new Date(agora); d.setDate(agora.getDate()-15); return d; }
+  if (filter === '30d') { const d = new Date(agora); d.setDate(agora.getDate()-30); return d; }
+  if (filter === 'ano') return new Date(agora.getFullYear(), 0, 1);
   return null;
 }
 
 function applyFilters(dataset) {
   const unit = document.getElementById('unitSel')?.value || '';
   const cutoff = getCutoff();
+  const agora = new Date();
   let d = [...dataset];
   if (unit) d = d.filter(r => r.unidade === unit);
-  if (cutoff) d = d.filter(r => new Date(r.data_avaliacao) >= cutoff);
+  if (cutoff) d = d.filter(r => { const dt = parseData(r.data_avaliacao); return dt >= cutoff && dt <= agora; });
   return d;
 }
 
 function getUnitData(u) {
   const cutoff = getCutoff();
+  const agora = new Date();
   let d = all.filter(r => r.unidade === u);
-  if (cutoff) d = d.filter(r => new Date(r.data_avaliacao) >= cutoff);
+  if (cutoff) d = d.filter(r => { const dt = parseData(r.data_avaliacao); return dt >= cutoff && dt <= agora; });
   return d;
 }
 
@@ -142,11 +152,11 @@ function color(v) {
 }
 
 function ago(ts) {
-  const s = (Date.now() - new Date(ts)) / 1000;
+  const s = (Date.now() - parseData(ts)) / 1000;
   if (s < 60) return `${Math.floor(s)}s atrás`;
   if (s < 3600) return `${Math.floor(s/60)}min atrás`;
   if (s < 86400) return `${Math.floor(s/3600)}h atrás`;
-  return new Date(ts).toLocaleDateString('pt-BR');
+  return parseData(ts).toLocaleDateString('pt-BR');
 }
 
 function cls(s) { return s >= 9 ? 'Promotor' : s >= 7 ? 'Neutro' : 'Detrator'; }
@@ -217,7 +227,7 @@ function render() {
     </div>`;
   }).join('');
 
-  const feed = [...d].sort((a,b) => new Date(b.data_avaliacao) - new Date(a.data_avaliacao)).slice(0,10);
+  const feed = [...d].sort((a,b) => parseData(b.data_avaliacao) - parseData(a.data_avaliacao)).slice(0,10);
 
   document.getElementById('app').innerHTML = `
     <div class="metrics">
@@ -269,14 +279,14 @@ function render() {
 
   const unit = document.getElementById('unitSel')?.value || '';
   const labels = [], vals = [];
-  const now = new Date();
+  const agora = new Date();
 
   if (filter === 'ano') {
-    const year = now.getFullYear();
-    for (let m = 0; m <= now.getMonth(); m++) {
+    const year = agora.getFullYear();
+    for (let m = 0; m <= agora.getMonth(); m++) {
       labels.push(new Date(year, m, 1).toLocaleDateString('pt-BR', {month:'short'}));
       const dd = all.filter(r => {
-        const rd = new Date(r.data_avaliacao);
+        const rd = parseData(r.data_avaliacao);
         return (!unit || r.unidade===unit) && rd.getFullYear()===year && rd.getMonth()===m;
       });
       vals.push(nps(dd));
@@ -284,8 +294,9 @@ function render() {
   } else {
     const days = filter === '30d' ? 30 : 15;
     for (let i = days-1; i >= 0; i--) {
-      const day = new Date(now - i*864e5);
-      const key = day.toISOString().slice(0,10);
+      const day = new Date(agora);
+      day.setDate(agora.getDate() - i);
+      const key = `${day.getFullYear()}-${String(day.getMonth()+1).padStart(2,'0')}-${String(day.getDate()).padStart(2,'0')}`;
       labels.push(day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
       const dd = all.filter(r => (!unit||r.unidade===unit) && r.data_avaliacao?.slice(0,10)===key);
       vals.push(nps(dd));
@@ -300,19 +311,14 @@ async function load() {
     const yearStart = `${new Date().getFullYear()}-01-01T00:00:00`;
     const url = `${SUPA_URL}/rest/v1/Avaliacoes?select=avaliacao,data_avaliacao,unidade&data_avaliacao=gte.${yearStart}&order=data_avaliacao.desc&limit=5000`;
     const res = await fetch(url, {
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': `Bearer ${SUPA_KEY}`,
-        'Accept': 'application/json'
-      }
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Accept': 'application/json' }
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     all = await res.json();
     if (!Array.isArray(all)) throw new Error('Resposta inválida');
     render();
   } catch(e) {
-    document.getElementById('app').innerHTML =
-      `<div class="error-box">Erro: ${e.message}</div>`;
+    document.getElementById('app').innerHTML = `<div class="error-box">Erro: ${e.message}</div>`;
   }
 }
 

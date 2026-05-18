@@ -107,9 +107,10 @@ function setFilter(f, el) {
 
 function getCutoff() {
   const now = new Date();
-  if (filter === '15d') return new Date(now - 15*864e5).toISOString();
-  if (filter === '30d') return new Date(now - 30*864e5).toISOString();
-  return null; // ano — já filtrado no load()
+  if (filter === '15d') return new Date(now - 15*864e5);
+  if (filter === '30d') return new Date(now - 30*864e5);
+  if (filter === 'ano') return new Date(now.getFullYear(), 0, 1);
+  return null;
 }
 
 function applyFilters(dataset) {
@@ -117,14 +118,14 @@ function applyFilters(dataset) {
   const cutoff = getCutoff();
   let d = [...dataset];
   if (unit) d = d.filter(r => r.unidade === unit);
-  if (cutoff) d = d.filter(r => r.data_avaliacao >= cutoff);
+  if (cutoff) d = d.filter(r => new Date(r.data_avaliacao) >= cutoff);
   return d;
 }
 
 function getUnitData(u) {
   const cutoff = getCutoff();
   let d = all.filter(r => r.unidade === u);
-  if (cutoff) d = d.filter(r => r.data_avaliacao >= cutoff);
+  if (cutoff) d = d.filter(r => new Date(r.data_avaliacao) >= cutoff);
   return d;
 }
 
@@ -179,7 +180,7 @@ function buildChart(labels, vals) {
         y: {
           min: -100, max: 100,
           grid: { color: 'rgba(0,0,0,0.05)' },
-          ticks: { color: '#aaa', font: { size: 11 }, callback: v => v > 0 ? '+'+v : v }
+          ticks: { color: '#aaa', font: { size: 11 }, callback: v => v > 0 ? '+'+v : String(v) }
         },
         x: {
           grid: { display: false },
@@ -245,7 +246,7 @@ function render() {
     <div class="units">${unitCards}</div>
     <div class="chart-box">
       <div class="section-title" style="margin-bottom:12px">Evolução NPS</div>
-      <div class="chart-wrap"><canvas id="ch" role="img" aria-label="Evolução do NPS no período">Gráfico NPS.</canvas></div>
+      <div class="chart-wrap"><canvas id="ch" role="img" aria-label="Evolução NPS no período">Gráfico NPS.</canvas></div>
     </div>
     <div class="section-title">Últimas respostas</div>
     <div class="feed-box">
@@ -268,22 +269,22 @@ function render() {
 
   const unit = document.getElementById('unitSel')?.value || '';
   const labels = [], vals = [];
+  const now = new Date();
 
   if (filter === 'ano') {
-    const now = new Date();
-    const currentYear = now.getFullYear();
+    const year = now.getFullYear();
     for (let m = 0; m <= now.getMonth(); m++) {
-      labels.push(new Date(currentYear, m, 1).toLocaleDateString('pt-BR', {month:'short'}));
+      labels.push(new Date(year, m, 1).toLocaleDateString('pt-BR', {month:'short'}));
       const dd = all.filter(r => {
         const rd = new Date(r.data_avaliacao);
-        return (!unit || r.unidade===unit) && rd.getFullYear()===currentYear && rd.getMonth()===m;
+        return (!unit || r.unidade===unit) && rd.getFullYear()===year && rd.getMonth()===m;
       });
       vals.push(nps(dd));
     }
   } else {
     const days = filter === '30d' ? 30 : 15;
     for (let i = days-1; i >= 0; i--) {
-      const day = new Date(Date.now() - i*864e5);
+      const day = new Date(now - i*864e5);
       const key = day.toISOString().slice(0,10);
       labels.push(day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
       const dd = all.filter(r => (!unit||r.unidade===unit) && r.data_avaliacao?.slice(0,10)===key);

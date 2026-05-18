@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel NPS — Escape60</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0a0a0a; color: #fff; min-height: 100vh; padding: 1.5rem; }
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #1f1f1f; }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .logo { background: #fff; color: #000; font-size: 11px; font-weight: 700; padding: 6px 8px; border-radius: 8px; letter-spacing: 1px; }
+    h1 { font-size: 18px; font-weight: 600; }
+    .live { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #22c55e; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .filters { display: flex; gap: 8px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .btn { padding: 6px 14px; border-radius: 20px; border: 1px solid #2a2a2a; background: transparent; color: #888; font-size: 12px; cursor: pointer; transition: all .15s; }
+    .btn.active { background: #fff; color: #000; border-color: #fff; }
+    select { padding: 6px 12px; border-radius: 20px; border: 1px solid #2a2a2a; background: #111; color: #888; font-size: 12px; cursor: pointer; }
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+    .card { background: #111; border-radius: 14px; padding: 14px 16px; }
+    .card-label { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+    .card-value { font-size: 28px; font-weight: 600; line-height: 1; }
+    .card-sub { font-size: 11px; color: #555; margin-top: 4px; }
+    .green { color: #22c55e; }
+    .red { color: #ef4444; }
+    .yellow { color: #f59e0b; }
+    .section-title { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+    .units { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+    .unit { background: #111; border-radius: 14px; padding: 14px 16px; }
+    .unit-name { font-size: 13px; font-weight: 600; color: #aaa; margin-bottom: 6px; }
+    .unit-nps { font-size: 26px; font-weight: 600; line-height: 1; margin-bottom: 2px; }
+    .unit-count { font-size: 11px; color: #555; }
+    .bar { display: flex; height: 4px; border-radius: 2px; overflow: hidden; margin-top: 8px; gap: 1px; }
+    .bar-p { background: #22c55e; }
+    .bar-n { background: #f59e0b; }
+    .bar-d { background: #ef4444; }
+    .chart-box { background: #111; border-radius: 14px; padding: 16px; margin-bottom: 1.5rem; }
+    .chart-wrap { position: relative; width: 100%; height: 180px; }
+    .feed-box { background: #111; border-radius: 14px; overflow: hidden; }
+    .feed-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid #1a1a1a; animation: slide .3s ease; }
+    .feed-item:last-child { border-bottom: none; }
+    @keyframes slide { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+    .score-badge { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; flex-shrink: 0; }
+    .sp { background: #052e16; color: #22c55e; }
+    .sn { background: #2d1f00; color: #f59e0b; }
+    .sd { background: #2d0a0a; color: #ef4444; }
+    .feed-unit { font-size: 13px; font-weight: 500; }
+    .feed-time { font-size: 11px; color: #555; }
+    .tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
+    .tp { background: #052e16; color: #22c55e; }
+    .tn { background: #2d1f00; color: #f59e0b; }
+    .td { background: #2d0a0a; color: #ef4444; }
+    .footer { text-align: right; font-size: 10px; color: #333; margin-top: 10px; }
+    .empty { text-align: center; padding: 2rem; color: #444; font-size: 13px; }
+    .error { background: #1a0000; border-radius: 14px; padding: 1.5rem; text-align: center; color: #ef4444; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">E60</div>
+    <h1>Painel NPS</h1>
+  </div>
+  <div class="live"><div class="dot"></div>Ao vivo</div>
+</header>
+
+<div class="filters">
+  <button class="btn active" onclick="setFilter('hoje',this)">Hoje</button>
+  <button class="btn" onclick="setFilter('semana',this)">7 dias</button>
+  <button class="btn" onclick="setFilter('mes',this)">30 dias</button>
+  <button class="btn" onclick="setFilter('total',this)">Total</button>
+  <select id="unitSel" onchange="render()">
+    <option value="">Todas as unidades</option>
+    <option>VO</option><option>HS</option><option>MO</option>
+    <option>TT</option><option>JD</option><option>CP</option>
+  </select>
+</div>
+
+<div id="app"><div class="empty">Carregando...</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const URL  = 'https://fgozipigrjmlvzptilzb.supabase.co';
+const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnb3ppcGlncmptbHZ6cHRpbHpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1OTgwODIsImV4cCI6MjA2ODE3NDA4Mn0.lK4zJHJiFY_mZDazSUwauzylCJhHqsSGqTaGJuEPe5E';
+const UNITS = ['VO','

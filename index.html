@@ -100,7 +100,8 @@ let all = [], filter = '15d', chart = null;
 
 function parseData(str) {
   if (!str) return new Date(0);
-  const [data, hora] = str.split(' ');
+  const clean = str.replace('T', ' ').replace(/\+.*$/, '').replace(/Z$/, '').trim();
+  const [data, hora] = clean.split(' ');
   const [ano, mes, dia] = data.split('-').map(Number);
   const [h, min, s] = (hora || '00:00:00').split(':').map(Number);
   return new Date(ano, mes - 1, dia, h, min, s);
@@ -298,7 +299,13 @@ function render() {
       day.setDate(agora.getDate() - i);
       const key = `${day.getFullYear()}-${String(day.getMonth()+1).padStart(2,'0')}-${String(day.getDate()).padStart(2,'0')}`;
       labels.push(day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
-      const dd = all.filter(r => (!unit||r.unidade===unit) && r.data_avaliacao?.slice(0,10)===key);
+      const dd = all.filter(r => {
+        if (!unit || r.unidade===unit) {
+          const clean = r.data_avaliacao?.replace('T',' ').replace(/\+.*$/,'').replace(/Z$/,'').trim();
+          return clean?.slice(0,10) === key;
+        }
+        return false;
+      });
       vals.push(nps(dd));
     }
   }

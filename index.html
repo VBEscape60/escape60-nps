@@ -77,7 +77,7 @@
   <button class="btn active" onclick="setFilter('15d',this)">15 dias</button>
   <button class="btn" onclick="setFilter('30d',this)">30 dias</button>
   <button class="btn" onclick="setFilter('ano',this)">Este ano</button>
-  <select id="unitSel" onchange="render()">
+  <select id="unitSel" onchange="load()">
     <option value="">Todas as unidades</option>
     <option value="VO">VO</option>
     <option value="HS">HS</option>
@@ -96,19 +96,14 @@ const SUPA_URL = 'https://fgozipigrjmlvzptilzb.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnb3ppcGlncmptbHZ6cHRpbHpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1OTgwODIsImV4cCI6MjA2ODE3NDA4Mn0.lK4zJHJiFY_mZDazSUwauzylCJhHqsSGqTaGJuEPe5E';
 const UNITS = ['VO','HS','MO','TT','JD','CA'];
 
-let all = [], filter = '15d', chart = null;
-
-function dateKey(offsetDays) {
-  const d = new Date();
-  d.setDate(d.getDate() - offsetDays);
-  return d.toISOString().slice(0, 10);
-}
+let resumo = [], feed = [], filter = '15d', chart = null;
 
 function getStartDate() {
-  if (filter === '15d') return dateKey(15);
-  if (filter === '30d') return dateKey(30);
-  if (filter === 'ano') return `${new Date().getFullYear()}-01-01`;
-  return `${new Date().getFullYear()}-01-01`;
+  const d = new Date();
+  if (filter === '15d') d.setDate(d.getDate()-15);
+  else if (filter === '30d') d.setDate(d.getDate()-30);
+  else if (filter === 'ano') return `${new Date().getFullYear()}-01-01`;
+  return d.toISOString().slice(0,10);
 }
 
 function setFilter(f, el) {
@@ -118,20 +113,9 @@ function setFilter(f, el) {
   load();
 }
 
-function applyUnit(dataset) {
-  const unit = document.getElementById('unitSel')?.value || '';
-  return unit ? dataset.filter(r => r.unidade === unit) : dataset;
-}
-
-function getUnitData(u) {
-  return all.filter(r => r.unidade === u);
-}
-
-function nps(d) {
-  if (!d.length) return null;
-  const p = d.filter(r => r.avaliacao >= 9).length;
-  const dt = d.filter(r => r.avaliacao <= 6).length;
-  return Math.round((p / d.length - dt / d.length) * 100);
+function npsCalc(p, dt, total) {
+  if (!total) return null;
+  return Math.round((p/total - dt/total)*100);
 }
 
 function color(v) {
@@ -140,7 +124,8 @@ function color(v) {
 }
 
 function ago(ts) {
-  const s = (Date.now() - new Date(ts.replace(' ', 'T'))) / 1000;
+  if (!ts) return '';
+  const s = (Date.now() - new Date(ts.replace(' ','T'))) / 1000;
   if (s < 60) return `${Math.floor(s)}s atrás`;
   if (s < 3600) return `${Math.floor(s/60)}min atrás`;
   if (s < 86400) return `${Math.floor(s/3600)}h atrás`;
@@ -149,10 +134,48 @@ function ago(ts) {
 
 function cls(s) { return s >= 9 ? 'Promotor' : s >= 7 ? 'Neutro' : 'Detrator'; }
 
-function buildChart(labels, vals) {
+function buildChart() {
   if (chart) { chart.destroy(); chart = null; }
   const ctx = document.getElementById('ch');
   if (!ctx) return;
+
+  const unit = document.getElementById('unitSel')?.value || '';
+  const byDate = {};
+
+  resumo.forEach(r => {
+    if (unit && r.unidade !== unit) return;
+    if (!byDate[r.data]) byDate[r.data] = {p:0, n:0, d:0, t:0};
+    byDate[r.data].p += Number(r.promotores);
+    byDate[r.data].n += Number(r.neutros);
+    byDate[r.data].d += Number(r.detratores);
+    byDate[r.data].t += Number(r.total);
+  });
+
+  let labels = [], vals = [];
+
+  if (filter === 'ano') {
+    const year = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    for (let m = 0; m <= currentMonth; m++) {
+      const monthKey = `${year}-${String(m+1).padStart(2,'0')}`;
+      labels.push(new Date(year, m, 1).toLocaleDateString('pt-BR',{month:'short'}));
+      let p=0, d=0, t=0;
+      Object.entries(byDate).forEach(([date, v]) => {
+        if (date.startsWith(monthKey)) { p+=v.p; d+=v.d; t+=v.t; }
+      });
+      vals.push(t ? Math.round((p/t - d/t)*100) : null);
+    }
+  } else {
+    const days = filter === '30d' ? 30 : 15;
+    for (let i = days-1; i >= 0; i--) {
+      const day = new Date(); day.setDate(day.getDate()-i);
+      const key = day.toISOString().slice(0,10);
+      labels.push(day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+      const v = byDate[key];
+      vals.push(v && v.t ? Math.round((v.p/v.t - v.d/v.t)*100) : null);
+    }
+  }
+
   chart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -165,128 +188,89 @@ function buildChart(labels, vals) {
         borderWidth: 2,
         pointBackgroundColor: vals.map(v => color(v)),
         pointRadius: vals.map(v => v !== null ? 4 : 0),
-        tension: .3,
-        fill: true,
-        spanGaps: true
+        tension: .3, fill: true, spanGaps: true
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        y: {
-          min: -100, max: 100,
-          grid: { color: 'rgba(0,0,0,0.05)' },
-          ticks: { color: '#aaa', font: { size: 11 }, callback: v => v > 0 ? '+'+v : String(v) }
-        },
-        x: {
-          grid: { display: false },
-          ticks: { color: '#aaa', font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 }
-        }
+        y: { min:-100, max:100, grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#aaa',font:{size:11},callback:v=>v>0?'+'+v:String(v)} },
+        x: { grid:{display:false}, ticks:{color:'#aaa',font:{size:11},maxRotation:0,autoSkip:true,maxTicksLimit:10} }
       }
     }
   });
 }
 
 function render() {
-  const d = applyUnit(all);
-  const n = nps(d), total = d.length;
-  const p = d.filter(r => r.avaliacao >= 9).length;
-  const nt = d.filter(r => r.avaliacao >= 7 && r.avaliacao <= 8).length;
-  const dt = d.filter(r => r.avaliacao <= 6).length;
-  const pct = v => total ? Math.round(v/total*100) : 0;
+  const unit = document.getElementById('unitSel')?.value || '';
+
+  const filtered = unit ? resumo.filter(r => r.unidade === unit) : resumo;
+  let totalR=0, totalP=0, totalN=0, totalD=0;
+  filtered.forEach(r => {
+    totalR += Number(r.total);
+    totalP += Number(r.promotores);
+    totalN += Number(r.neutros);
+    totalD += Number(r.detratores);
+  });
+  const n = npsCalc(totalP, totalD, totalR);
+  const pct = v => totalR ? Math.round(v/totalR*100) : 0;
 
   const unitCards = UNITS.map(u => {
-    const ud = getUnitData(u);
-    const un = nps(ud);
-    const up = ud.filter(r => r.avaliacao >= 9).length;
-    const unu = ud.filter(r => r.avaliacao >= 7 && r.avaliacao <= 8).length;
-    const udt = ud.filter(r => r.avaliacao <= 6).length;
+    const ur = resumo.filter(r => r.unidade === u);
+    let t=0,p=0,n2=0,d=0;
+    ur.forEach(r => { t+=Number(r.total); p+=Number(r.promotores); n2+=Number(r.neutros); d+=Number(r.detratores); });
+    const un = npsCalc(p,d,t);
     return `<div class="unit">
       <div class="unit-name">${u}</div>
       <div class="unit-nps" style="color:${color(un)}">${un===null?'—':(un>0?'+':'')+un}</div>
-      <div class="unit-count">${ud.length} respostas</div>
+      <div class="unit-count">${t} respostas</div>
       <div class="bar">
-        <div class="bar-p" style="flex:${up}"></div>
-        <div class="bar-n" style="flex:${unu}"></div>
-        <div class="bar-d" style="flex:${udt}"></div>
+        <div class="bar-p" style="flex:${p}"></div>
+        <div class="bar-n" style="flex:${n2}"></div>
+        <div class="bar-d" style="flex:${d}"></div>
       </div>
     </div>`;
   }).join('');
 
-  const feed = [...d].sort((a,b) => new Date(b.data_avaliacao.replace(' ','T')) - new Date(a.data_avaliacao.replace(' ','T'))).slice(0,10);
-  const unit = document.getElementById('unitSel')?.value || '';
-  const labels = [], vals = [];
-  const agora = new Date();
-
-  if (filter === 'ano') {
-    const year = agora.getFullYear();
-    for (let m = 0; m <= agora.getMonth(); m++) {
-      labels.push(new Date(year, m, 1).toLocaleDateString('pt-BR', {month:'short'}));
-      const dd = all.filter(r => {
-        if (unit && r.unidade !== unit) return false;
-        const rd = new Date(r.data_avaliacao.replace(' ','T'));
-        return rd.getFullYear()===year && rd.getMonth()===m;
-      });
-      vals.push(nps(dd));
-    }
-  } else {
-    const days = filter === '30d' ? 30 : 15;
-    for (let i = days-1; i >= 0; i--) {
-      const day = new Date(agora);
-      day.setDate(agora.getDate() - i);
-      const key = day.toISOString().slice(0,10);
-      labels.push(day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
-      const dd = all.filter(r => {
-        if (unit && r.unidade !== unit) return false;
-        return r.data_avaliacao?.slice(0,10) === key;
-      });
-      vals.push(nps(dd));
-    }
-  }
+  const feedFiltered = unit ? feed.filter(r => r.unidade === unit) : feed;
 
   document.getElementById('app').innerHTML = `
     <div class="metrics">
       <div class="card">
         <div class="card-label">NPS Geral</div>
         <div class="card-value" style="color:${color(n)}">${n===null?'—':(n>0?'+':'')+n}</div>
-        <div class="card-sub">${total} respostas</div>
+        <div class="card-sub">${totalR} respostas</div>
       </div>
       <div class="card">
         <div class="card-label">Promotores</div>
-        <div class="card-value green">${p}</div>
-        <div class="card-sub">${pct(p)}%</div>
+        <div class="card-value green">${totalP}</div>
+        <div class="card-sub">${pct(totalP)}%</div>
       </div>
       <div class="card">
         <div class="card-label">Neutros</div>
-        <div class="card-value yellow">${nt}</div>
-        <div class="card-sub">${pct(nt)}%</div>
+        <div class="card-value yellow">${totalN}</div>
+        <div class="card-sub">${pct(totalN)}%</div>
       </div>
       <div class="card">
         <div class="card-label">Detratores</div>
-        <div class="card-value red">${dt}</div>
-        <div class="card-sub">${pct(dt)}%</div>
+        <div class="card-value red">${totalD}</div>
+        <div class="card-sub">${pct(totalD)}%</div>
       </div>
     </div>
     <div class="section-title">Por unidade</div>
     <div class="units">${unitCards}</div>
     <div class="chart-box">
       <div class="section-title" style="margin-bottom:12px">Evolução NPS</div>
-      <div class="chart-wrap"><canvas id="ch" role="img" aria-label="Evolução NPS no período">Gráfico NPS.</canvas></div>
+      <div class="chart-wrap"><canvas id="ch" role="img" aria-label="Evolução NPS">Gráfico NPS.</canvas></div>
     </div>
     <div class="section-title">Últimas respostas</div>
     <div class="feed-box">
-      ${feed.length ? feed.map(r => {
-        const c = cls(r.avaliacao);
-        const sc = c==='Promotor'?'sp':c==='Neutro'?'sn':'sd';
-        const tg = c==='Promotor'?'tp':c==='Neutro'?'tn':'td';
+      ${feedFiltered.length ? feedFiltered.map(r => {
+        const c=cls(r.avaliacao), sc=c==='Promotor'?'sp':c==='Neutro'?'sn':'sd', tg=c==='Promotor'?'tp':c==='Neutro'?'tn':'td';
         return `<div class="feed-item">
           <div class="score-badge ${sc}">${r.avaliacao}</div>
-          <div style="flex:1">
-            <div class="feed-unit">${r.unidade||'—'}</div>
-            <div class="feed-time">${ago(r.data_avaliacao)}</div>
-          </div>
+          <div style="flex:1"><div class="feed-unit">${r.unidade||'—'}</div><div class="feed-time">${ago(r.data_avaliacao)}</div></div>
           <span class="tag ${tg}">${c}</span>
         </div>`;
       }).join('') : '<div class="empty">Sem respostas no período</div>'}
@@ -294,20 +278,33 @@ function render() {
     <div class="footer">Atualizado às ${new Date().toLocaleTimeString('pt-BR')} · refresh a cada 60s</div>
   `;
 
-  setTimeout(() => buildChart(labels, vals), 50);
+  setTimeout(buildChart, 50);
 }
 
 async function load() {
   document.getElementById('app').innerHTML = '<div class="loading">Carregando...</div>';
+  const start = getStartDate();
+  const headers = {
+    'apikey': SUPA_KEY,
+    'Authorization': `Bearer ${SUPA_KEY}`,
+    'Accept': 'application/json',
+    'Range-Unit': 'items',
+    'Range': '0-9999'
+  };
+
   try {
-    const start = getStartDate();
-    const url = `${SUPA_URL}/rest/v1/Avaliacoes?select=avaliacao,data_avaliacao,unidade&data_avaliacao=gte.${start}&order=data_avaliacao.desc&limit=5000`;
-    const res = await fetch(url, {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Accept': 'application/json' }
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    all = await res.json();
-    if (!Array.isArray(all)) throw new Error('Resposta inválida');
+    const [r1, r2] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/resumo_nps?data=gte.${start}&order=data.desc`, { headers }),
+      fetch(`${SUPA_URL}/rest/v1/Avaliacoes?select=avaliacao,data_avaliacao,unidade&data_avaliacao=gte.${start}&order=data_avaliacao.desc&limit=20`, { headers })
+    ]);
+
+    if (!r1.ok) throw new Error(`Resumo: HTTP ${r1.status} — Rode o SQL da View no Supabase primeiro`);
+    if (!r2.ok) throw new Error(`Feed: HTTP ${r2.status}`);
+
+    resumo = await r1.json();
+    feed = await r2.json();
+
+    if (!Array.isArray(resumo)) throw new Error('View resumo_nps não encontrada — rode o SQL no Supabase');
     render();
   } catch(e) {
     document.getElementById('app').innerHTML = `<div class="error-box">Erro: ${e.message}</div>`;

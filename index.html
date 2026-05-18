@@ -6,72 +6,78 @@
   <title>Painel NPS — Escape60</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0a0a0a; color: #fff; min-height: 100vh; padding: 1.5rem; }
-    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #1f1f1f; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f0; color: #1a1a1a; min-height: 100vh; padding: 1.5rem; }
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #e0e0d8; }
     .brand { display: flex; align-items: center; gap: 10px; }
-    .logo { background: #fff; color: #000; font-size: 11px; font-weight: 700; padding: 6px 8px; border-radius: 8px; letter-spacing: 1px; }
-    h1 { font-size: 18px; font-weight: 600; }
-    .live { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #22c55e; }
-    .dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; }
+    .logo-wrap { width: 36px; height: 36px; }
+    .logo-wrap img { width: 36px; height: 36px; object-fit: contain; border-radius: 8px; }
+    .logo-fallback { width: 36px; height: 36px; background: #1a1a1a; color: #fff; font-size: 11px; font-weight: 700; border-radius: 8px; display: flex; align-items: center; justify-content: center; letter-spacing: 1px; }
+    h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
+    .live { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #16a34a; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #16a34a; animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-    .filters { display: flex; gap: 8px; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .btn { padding: 6px 14px; border-radius: 20px; border: 1px solid #2a2a2a; background: transparent; color: #888; font-size: 12px; cursor: pointer; transition: all .15s; }
-    .btn.active { background: #fff; color: #000; border-color: #fff; }
-    select { padding: 6px 12px; border-radius: 20px; border: 1px solid #2a2a2a; background: #111; color: #888; font-size: 12px; cursor: pointer; }
+    .filters { display: flex; gap: 8px; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center; }
+    .btn { padding: 6px 16px; border-radius: 20px; border: 1px solid #d0d0c8; background: #fff; color: #666; font-size: 12px; cursor: pointer; transition: all .15s; }
+    .btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+    select { padding: 6px 12px; border-radius: 20px; border: 1px solid #d0d0c8; background: #fff; color: #666; font-size: 12px; cursor: pointer; }
     .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
-    .card { background: #111; border-radius: 14px; padding: 14px 16px; }
-    .card-label { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
-    .card-value { font-size: 28px; font-weight: 600; line-height: 1; }
-    .card-sub { font-size: 11px; color: #555; margin-top: 4px; }
-    .green { color: #22c55e; }
-    .red { color: #ef4444; }
-    .yellow { color: #f59e0b; }
-    .section-title { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+    .card { background: #fff; border-radius: 14px; padding: 14px 16px; border: 1px solid #e8e8e0; }
+    .card-label { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+    .card-value { font-size: 28px; font-weight: 600; line-height: 1; color: #1a1a1a; }
+    .card-sub { font-size: 11px; color: #aaa; margin-top: 4px; }
+    .green { color: #16a34a; }
+    .red { color: #dc2626; }
+    .yellow { color: #d97706; }
+    .section-title { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
     .units { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
-    .unit { background: #111; border-radius: 14px; padding: 14px 16px; }
-    .unit-name { font-size: 13px; font-weight: 600; color: #aaa; margin-bottom: 6px; }
+    .unit { background: #fff; border-radius: 14px; padding: 14px 16px; border: 1px solid #e8e8e0; }
+    .unit-name { font-size: 13px; font-weight: 600; color: #888; margin-bottom: 6px; }
     .unit-nps { font-size: 26px; font-weight: 600; line-height: 1; margin-bottom: 2px; }
-    .unit-count { font-size: 11px; color: #555; }
+    .unit-count { font-size: 11px; color: #bbb; }
     .bar { display: flex; height: 4px; border-radius: 2px; overflow: hidden; margin-top: 8px; gap: 1px; }
-    .bar-p { background: #22c55e; }
-    .bar-n { background: #f59e0b; }
-    .bar-d { background: #ef4444; }
-    .chart-box { background: #111; border-radius: 14px; padding: 16px; margin-bottom: 1.5rem; }
-    .chart-wrap { position: relative; width: 100%; height: 180px; }
-    .feed-box { background: #111; border-radius: 14px; overflow: hidden; }
-    .feed-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid #1a1a1a; animation: slide .3s ease; }
+    .bar-p { background: #16a34a; }
+    .bar-n { background: #d97706; }
+    .bar-d { background: #dc2626; }
+    .chart-box { background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 1.5rem; border: 1px solid #e8e8e0; }
+    .chart-wrap { position: relative; width: 100%; height: 200px; }
+    .feed-box { background: #fff; border-radius: 14px; overflow: hidden; border: 1px solid #e8e8e0; margin-bottom: 1.5rem; }
+    .feed-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid #f0f0e8; animation: slide .3s ease; }
     .feed-item:last-child { border-bottom: none; }
     @keyframes slide { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
     .score-badge { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; flex-shrink: 0; }
-    .sp { background: #052e16; color: #22c55e; }
-    .sn { background: #2d1f00; color: #f59e0b; }
-    .sd { background: #2d0a0a; color: #ef4444; }
-    .feed-unit { font-size: 13px; font-weight: 500; }
-    .feed-time { font-size: 11px; color: #555; }
+    .sp { background: #dcfce7; color: #16a34a; }
+    .sn { background: #fef9c3; color: #a16207; }
+    .sd { background: #fee2e2; color: #dc2626; }
+    .feed-unit { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+    .feed-time { font-size: 11px; color: #bbb; }
     .tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
-    .tp { background: #052e16; color: #22c55e; }
-    .tn { background: #2d1f00; color: #f59e0b; }
-    .td { background: #2d0a0a; color: #ef4444; }
-    .footer { text-align: right; font-size: 10px; color: #333; margin-top: 10px; }
-    .empty { text-align: center; padding: 2rem; color: #444; font-size: 13px; }
-    .error { background: #1a0000; border-radius: 14px; padding: 1.5rem; text-align: center; color: #ef4444; font-size: 13px; }
+    .tp { background: #dcfce7; color: #16a34a; }
+    .tn { background: #fef9c3; color: #a16207; }
+    .td { background: #fee2e2; color: #dc2626; }
+    .footer { text-align: right; font-size: 10px; color: #ccc; margin-top: 8px; }
+    .empty { text-align: center; padding: 2rem; color: #ccc; font-size: 13px; }
+    .error-box { background: #fff0f0; border-radius: 14px; padding: 1.5rem; text-align: center; color: #dc2626; font-size: 13px; border: 1px solid #fecaca; }
   </style>
 </head>
 <body>
 
 <header>
   <div class="brand">
-    <div class="logo">E60</div>
+    <div class="logo-wrap">
+      <img src="https://escape60.com.br/wp-content/uploads/2021/08/cropped-favicon-escape60-192x192.png"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+           alt="Escape60">
+      <div class="logo-fallback" style="display:none">E60</div>
+    </div>
     <h1>Painel NPS</h1>
   </div>
   <div class="live"><div class="dot"></div>Ao vivo</div>
 </header>
 
 <div class="filters">
-  <button class="btn active" onclick="setFilter('hoje',this)">Hoje</button>
-  <button class="btn" onclick="setFilter('semana',this)">7 dias</button>
-  <button class="btn" onclick="setFilter('mes',this)">30 dias</button>
-  <button class="btn" onclick="setFilter('total',this)">Total</button>
+  <button class="btn active" onclick="setFilter('15d',this)">15 dias</button>
+  <button class="btn" onclick="setFilter('30d',this)">30 dias</button>
+  <button class="btn" onclick="setFilter('ano',this)">Este ano</button>
   <select id="unitSel" onchange="render()">
     <option value="">Todas as unidades</option>
     <option>VO</option><option>HS</option><option>MO</option>
@@ -83,11 +89,11 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const URL  = 'https://fgozipigrjmlvzptilzb.supabase.co';
-const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnb3ppcGlncmptbHZ6cHRpbHpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1OTgwODIsImV4cCI6MjA2ODE3NDA4Mn0.lK4zJHJiFY_mZDazSUwauzylCJhHqsSGqTaGJuEPe5E';
+const SUPA_URL = 'https://fgozipigrjmlvzptilzb.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnb3ppcGlncmptbHZ6cHRpbHpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1OTgwODIsImV4cCI6MjA2ODE3NDA4Mn0.lK4zJHJiFY_mZDazSUwauzylCJhHqsSGqTaGJuEPe5E';
 const UNITS = ['VO','HS','MO','TT','JD','CP'];
 
-let all = [], filter = 'hoje', chart = null;
+let all = [], filter = '15d', chart = null;
 
 function setFilter(f, el) {
   filter = f;
@@ -96,13 +102,20 @@ function setFilter(f, el) {
   render();
 }
 
-function getData() {
-  const unit = document.getElementById('unitSel').value;
+function getCutoff() {
   const now = new Date();
-  let d = unit ? all.filter(r => r.unidade === unit) : all;
-  if (filter === 'hoje') { const t = now.toISOString().slice(0,10); d = d.filter(r => r.data_avaliacao?.slice(0,10) === t); }
-  else if (filter === 'semana') { const c = new Date(now-7*864e5).toISOString(); d = d.filter(r => r.data_avaliacao >= c); }
-  else if (filter === 'mes') { const c = new Date(now-30*864e5).toISOString(); d = d.filter(r => r.data_avaliacao >= c); }
+  if (filter === '15d') return new Date(now - 15*864e5).toISOString();
+  if (filter === '30d') return new Date(now - 30*864e5).toISOString();
+  if (filter === 'ano') return new Date(now.getFullYear(), 0, 1).toISOString();
+  return null;
+}
+
+function getData(dataset) {
+  const unit = document.getElementById('unitSel')?.value || '';
+  const cutoff = getCutoff();
+  let d = dataset || all;
+  if (unit) d = d.filter(r => r.unidade === unit);
+  if (cutoff) d = d.filter(r => r.data_avaliacao >= cutoff);
   return d;
 }
 
@@ -114,8 +127,8 @@ function nps(d) {
 }
 
 function color(v) {
-  if (v === null) return '#555';
-  return v >= 50 ? '#22c55e' : v >= 0 ? '#f59e0b' : '#ef4444';
+  if (v === null) return '#ccc';
+  return v >= 50 ? '#16a34a' : v >= 0 ? '#d97706' : '#dc2626';
 }
 
 function ago(ts) {
@@ -128,6 +141,13 @@ function ago(ts) {
 
 function cls(s) { return s >= 9 ? 'Promotor' : s >= 7 ? 'Neutro' : 'Detrator'; }
 
+function getUnitData(u) {
+  const cutoff = getCutoff();
+  let d = all.filter(r => r.unidade === u);
+  if (cutoff) d = d.filter(r => r.data_avaliacao >= cutoff);
+  return d;
+}
+
 function render() {
   const d = getData();
   const n = nps(d), total = d.length;
@@ -137,79 +157,162 @@ function render() {
   const pct = v => total ? Math.round(v/total*100) : 0;
 
   const unitCards = UNITS.map(u => {
-    let ud = all.filter(r => r.unidade === u);
-    const now = new Date();
-    if (filter === 'hoje') { const t = now.toISOString().slice(0,10); ud = ud.filter(r => r.data_avaliacao?.slice(0,10) === t); }
-    else if (filter === 'semana') { const c = new Date(now-7*864e5).toISOString(); ud = ud.filter(r => r.data_avaliacao >= c); }
-    else if (filter === 'mes') { const c = new Date(now-30*864e5).toISOString(); ud = ud.filter(r => r.data_avaliacao >= c); }
-    const un = nps(ud), up = ud.filter(r=>r.avaliacao>=9).length, unu = ud.filter(r=>r.avaliacao>=7&&r.avaliacao<=8).length, udt = ud.filter(r=>r.avaliacao<=6).length;
+    const ud = getUnitData(u);
+    const un = nps(ud);
+    const up = ud.filter(r=>r.avaliacao>=9).length;
+    const unu = ud.filter(r=>r.avaliacao>=7&&r.avaliacao<=8).length;
+    const udt = ud.filter(r=>r.avaliacao<=6).length;
     return `<div class="unit">
       <div class="unit-name">${u}</div>
       <div class="unit-nps" style="color:${color(un)}">${un===null?'—':(un>0?'+':'')+un}</div>
       <div class="unit-count">${ud.length} respostas</div>
-      <div class="bar"><div class="bar-p" style="flex:${up}"></div><div class="bar-n" style="flex:${unu}"></div><div class="bar-d" style="flex:${udt}"></div></div>
+      <div class="bar">
+        <div class="bar-p" style="flex:${up}"></div>
+        <div class="bar-n" style="flex:${unu}"></div>
+        <div class="bar-d" style="flex:${udt}"></div>
+      </div>
     </div>`;
   }).join('');
 
-  const labels=[], vals=[];
-  for(let i=6;i>=0;i--){
-    const day = new Date(Date.now()-i*864e5);
-    labels.push(day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
-    const key = day.toISOString().slice(0,10);
-    const unit = document.getElementById('unitSel').value;
-    const dd = all.filter(r=>(unit?r.unidade===unit:true)&&r.data_avaliacao?.slice(0,10)===key);
-    vals.push(nps(dd));
+  const labels = [], vals = [];
+  const days = filter === 'ano' ? 12 : filter === '30d' ? 10 : 7;
+  const unit = document.getElementById('unitSel')?.value || '';
+
+  if (filter === 'ano') {
+    const now = new Date();
+    for (let i = 0; i < now.getMonth()+1; i++) {
+      const m = new Date(now.getFullYear(), i, 1);
+      labels.push(m.toLocaleDateString('pt-BR',{month:'short'}));
+      const dd = all.filter(r => {
+        const d = new Date(r.data_avaliacao);
+        return (!unit||r.unidade===unit) && d.getFullYear()===now.getFullYear() && d.getMonth()===i;
+      });
+      vals.push(nps(dd));
+    }
+  } else {
+    const n = filter === '30d' ? 30 : 15;
+    for (let i = n-1; i >= 0; i--) {
+      const day = new Date(Date.now()-i*864e5);
+      if (i % (n > 15 ? 3 : 2) === 0)
+        labels.push(day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+      else labels.push('');
+      const key = day.toISOString().slice(0,10);
+      const dd = all.filter(r=>(!unit||r.unidade===unit)&&r.data_avaliacao?.slice(0,10)===key);
+      vals.push(nps(dd));
+    }
   }
 
-  const feed = [...d].sort((a,b)=>new Date(b.data_avaliacao)-new Date(a.data_avaliacao)).slice(0,8);
+  const feed = [...d].sort((a,b)=>new Date(b.data_avaliacao)-new Date(a.data_avaliacao)).slice(0,10);
 
   document.getElementById('app').innerHTML = `
     <div class="metrics">
-      <div class="card"><div class="card-label">NPS Geral</div><div class="card-value" style="color:${color(n)}">${n===null?'—':(n>0?'+':'')+n}</div><div class="card-sub">${total} respostas</div></div>
-      <div class="card"><div class="card-label">Promotores</div><div class="card-value green">${p}</div><div class="card-sub">${pct(p)}%</div></div>
-      <div class="card"><div class="card-label">Neutros</div><div class="card-value yellow">${nt}</div><div class="card-sub">${pct(nt)}%</div></div>
-      <div class="card"><div class="card-label">Detratores</div><div class="card-value red">${dt}</div><div class="card-sub">${pct(dt)}%</div></div>
+      <div class="card">
+        <div class="card-label">NPS Geral</div>
+        <div class="card-value" style="color:${color(n)}">${n===null?'—':(n>0?'+':'')+n}</div>
+        <div class="card-sub">${total} respostas</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Promotores</div>
+        <div class="card-value green">${p}</div>
+        <div class="card-sub">${pct(p)}%</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Neutros</div>
+        <div class="card-value yellow">${nt}</div>
+        <div class="card-sub">${pct(nt)}%</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Detratores</div>
+        <div class="card-value red">${dt}</div>
+        <div class="card-sub">${pct(dt)}%</div>
+      </div>
     </div>
+
     <div class="section-title">Por unidade</div>
     <div class="units">${unitCards}</div>
+
     <div class="chart-box">
-      <div class="section-title" style="margin-bottom:12px">Evolução — últimos 7 dias</div>
-      <div class="chart-wrap"><canvas id="ch" role="img" aria-label="Evolução do NPS nos últimos 7 dias">Gráfico NPS 7 dias.</canvas></div>
+      <div class="section-title" style="margin-bottom:12px">Evolução NPS</div>
+      <div class="chart-wrap">
+        <canvas id="ch" role="img" aria-label="Evolução do NPS no período">Gráfico evolução NPS.</canvas>
+      </div>
     </div>
+
     <div class="section-title">Últimas respostas</div>
     <div class="feed-box">
-      ${feed.length ? feed.map(r=>{
+      ${feed.length ? feed.map(r => {
         const c=cls(r.avaliacao), sc=c==='Promotor'?'sp':c==='Neutro'?'sn':'sd', tg=c==='Promotor'?'tp':c==='Neutro'?'tn':'td';
-        return `<div class="feed-item"><div class="score-badge ${sc}">${r.avaliacao}</div><div style="flex:1"><div class="feed-unit">${r.unidade||'—'}</div><div class="feed-time">${ago(r.data_avaliacao)}</div></div><span class="tag ${tg}">${c}</span></div>`;
+        return `<div class="feed-item">
+          <div class="score-badge ${sc}">${r.avaliacao}</div>
+          <div style="flex:1">
+            <div class="feed-unit">${r.unidade||'—'}</div>
+            <div class="feed-time">${ago(r.data_avaliacao)}</div>
+          </div>
+          <span class="tag ${tg}">${c}</span>
+        </div>`;
       }).join('') : '<div class="empty">Sem respostas no período</div>'}
     </div>
-    <div class="footer">Atualizado às ${new Date().toLocaleTimeString('pt-BR')} · refresh a cada 30s</div>
+    <div class="footer">Atualizado às ${new Date().toLocaleTimeString('pt-BR')} · refresh a cada 60s</div>
   `;
 
-  if(chart){chart.destroy();chart=null;}
+  if (chart) { chart.destroy(); chart = null; }
   const ctx = document.getElementById('ch');
-  if(ctx) chart = new Chart(ctx,{
-    type:'line',
-    data:{labels,datasets:[{label:'NPS',data:vals,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.08)',borderWidth:2,pointBackgroundColor:vals.map(v=>color(v)),pointRadius:5,tension:.3,fill:true,spanGaps:true}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:-100,max:100,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#555',font:{size:11},callback:v=>v>0?'+'+v:v}},x:{grid:{display:false},ticks:{color:'#555',font:{size:11},autoSkip:false}}}}
-  });
+  if (ctx) {
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'NPS',
+          data: vals,
+          borderColor: '#1a1a1a',
+          backgroundColor: 'rgba(26,26,26,0.05)',
+          borderWidth: 2,
+          pointBackgroundColor: vals.map(v => color(v)),
+          pointRadius: 5,
+          tension: .3,
+          fill: true,
+          spanGaps: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            min: -100, max: 100,
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: { color: '#aaa', font: { size: 11 }, callback: v => v > 0 ? '+'+v : v }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#aaa', font: { size: 11 }, autoSkip: false, maxRotation: 0 }
+          }
+        }
+      }
+    });
+  }
 }
 
 async function load() {
   try {
-    const res = await fetch(`${URL}/rest/v1/Avaliacoes?select=avaliacao,data_avaliacao,unidade&order=data_avaliacao.desc&limit=5000`,{
-      headers:{'apikey':KEY,'Authorization':`Bearer ${KEY}`}
-    });
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/Avaliacoes?select=avaliacao,data_avaliacao,unidade&order=data_avaliacao.desc&limit=10000`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Accept': 'application/json' } }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
     all = await res.json();
+    if (!Array.isArray(all)) throw new Error('Resposta inválida do banco');
     render();
   } catch(e) {
-    document.getElementById('app').innerHTML = `<div class="error">Erro ao conectar: ${e.message}</div>`;
+    document.getElementById('app').innerHTML =
+      `<div class="error-box">Erro ao carregar dados: ${e.message}</div>`;
   }
 }
 
 load();
-setInterval(load, 30000);
+setInterval(load, 60000);
 </script>
 </body>
 </html>

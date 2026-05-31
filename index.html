@@ -19,15 +19,25 @@
     .btn { padding: 6px 16px; border-radius: 20px; border: 1px solid #d0d0c8; background: #fff; color: #666; font-size: 12px; cursor: pointer; transition: all .15s; }
     .btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
     select { padding: 6px 12px; border-radius: 20px; border: 1px solid #d0d0c8; background: #fff; color: #666; font-size: 12px; cursor: pointer; }
+    .alerts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+    .alert-card { background: #fff0f0; border: 1px solid #fecaca; border-left: 5px solid #dc2626; border-radius: 14px; padding: 12px 14px; color: #991b1b; display: flex; gap: 10px; align-items: flex-start; }
+    .alert-icon { font-size: 18px; line-height: 1; }
+    .alert-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 3px; }
+    .alert-main { font-size: 14px; font-weight: 600; }
+    .alert-sub { font-size: 11px; color: #b91c1c; margin-top: 2px; }
     .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
-    .card { background: #fff; border-radius: 14px; padding: 14px 16px; border: 1px solid #e8e8e0; }
+    .card { background: #fff; border-radius: 14px; padding: 14px 16px; border: 1px solid #e8e8e0; transition: all .15s; }
+    .card.clickable { cursor: pointer; }
+    .card.clickable:hover { border-color: #1a1a1a; transform: translateY(-1px); }
+    .card.filter-active { border-color: #1a1a1a; box-shadow: 0 0 0 2px rgba(26,26,26,.08); }
     .card-label { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
     .card-value { font-size: 28px; font-weight: 600; line-height: 1; color: #1a1a1a; }
     .card-sub { font-size: 11px; color: #aaa; margin-top: 4px; }
     .green { color: #16a34a; }
     .red { color: #dc2626; }
     .yellow { color: #d97706; }
-    .section-title { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+    .section-title { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .clear-filter { border: none; background: transparent; color: #666; font-size: 11px; text-decoration: underline; cursor: pointer; }
     .units { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
     .unit { background: #fff; border-radius: 14px; padding: 14px 16px; border: 1px solid #e8e8e0; }
     .unit-name { font-size: 13px; font-weight: 600; color: #888; margin-bottom: 6px; }
@@ -38,7 +48,7 @@
     .bar-n { background: #d97706; }
     .bar-d { background: #dc2626; }
     .chart-box { background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 1.5rem; border: 1px solid #e8e8e0; }
-    .chart-wrap { position: relative; width: 100%; height: 200px; }
+    .chart-wrap { position: relative; width: 100%; height: 220px; }
     .feed-box { background: #fff; border-radius: 14px; overflow: hidden; border: 1px solid #e8e8e0; margin-bottom: 1.5rem; }
     .feed-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid #f0f0e8; }
     .feed-item:last-child { border-bottom: none; }
@@ -47,7 +57,8 @@
     .sn { background: #fef9c3; color: #a16207; }
     .sd { background: #fee2e2; color: #dc2626; }
     .feed-unit { font-size: 13px; font-weight: 500; color: #1a1a1a; }
-    .feed-time { font-size: 11px; color: #bbb; }
+    .feed-time { font-size: 11px; color: #888; margin-top: 2px; }
+    .feed-date { color: #bbb; }
     .tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
     .tp { background: #dcfce7; color: #16a34a; }
     .tn { background: #fef9c3; color: #a16207; }
@@ -74,9 +85,9 @@
 </header>
 
 <div class="filters">
-  <button class="btn active" onclick="setFilter('15d',this)">15 dias</button>
-  <button class="btn" onclick="setFilter('30d',this)">30 dias</button>
-  <button class="btn" onclick="setFilter('ano',this)">Este ano</button>
+  <button class="btn active" onclick="setFilter('dia',this)">Diário</button>
+  <button class="btn" onclick="setFilter('semana',this)">Semanal</button>
+  <button class="btn" onclick="setFilter('mes',this)">Mensal</button>
   <select id="unitSel" onchange="load()">
     <option value="">Todas as unidades</option>
     <option value="VO">VO</option>
@@ -96,21 +107,55 @@ const SUPA_URL = 'https://fgozipigrjmlvzptilzb.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnb3ppcGlncmptbHZ6cHRpbHpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1OTgwODIsImV4cCI6MjA2ODE3NDA4Mn0.lK4zJHJiFY_mZDazSUwauzylCJhHqsSGqTaGJuEPe5E';
 const UNITS = ['VO','HS','MO','TT','JD','CA'];
 
-let resumo = [], feed = [], filter = '15d', chart = null;
+let resumo = [], feed = [], alerts = [], filter = 'dia', feedFilter = null, chart = null;
+
+function toDateOnly(d) {
+  return d.toISOString().slice(0,10);
+}
 
 function getStartDate() {
   const d = new Date();
-  if (filter === '15d') d.setDate(d.getDate()-15);
-  else if (filter === '30d') d.setDate(d.getDate()-30);
-  else if (filter === 'ano') return `${new Date().getFullYear()}-01-01`;
-  return d.toISOString().slice(0,10);
+  if (filter === 'dia') return toDateOnly(d);
+  if (filter === 'semana') {
+    const day = d.getDay();
+    const diff = day === 0 ? 6 : day - 1; // segunda-feira como início da semana
+    d.setDate(d.getDate() - diff);
+    return toDateOnly(d);
+  }
+  if (filter === 'mes') {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+  }
+  return toDateOnly(d);
+}
+
+function getFilterLabel() {
+  if (filter === 'dia') return 'Diário';
+  if (filter === 'semana') return 'Semana atual';
+  return 'Mês atual';
+}
+
+function getSince24h() {
+  const d = new Date();
+  d.setHours(d.getHours() - 24);
+  return d.toISOString();
 }
 
 function setFilter(f, el) {
   filter = f;
+  feedFilter = null;
   document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
   load();
+}
+
+function setFeedFilter(type) {
+  feedFilter = feedFilter === type ? null : type;
+  render();
+}
+
+function clearFeedFilter() {
+  feedFilter = null;
+  render();
 }
 
 function npsCalc(p, dt, total) {
@@ -123,16 +168,29 @@ function color(v) {
   return v >= 50 ? '#16a34a' : v >= 0 ? '#d97706' : '#dc2626';
 }
 
-function ago(ts) {
-  if (!ts) return '';
-  const s = (Date.now() - new Date(ts.replace(' ','T'))) / 1000;
-  if (s < 60) return `${Math.floor(s)}s atrás`;
-  if (s < 3600) return `${Math.floor(s/60)}min atrás`;
-  if (s < 86400) return `${Math.floor(s/3600)}h atrás`;
-  return new Date(ts.replace(' ','T')).toLocaleDateString('pt-BR');
+function parseDate(ts) {
+  if (!ts) return null;
+  return new Date(String(ts).replace(' ','T'));
 }
 
-function cls(s) { return s >= 9 ? 'Promotor' : s >= 7 ? 'Neutro' : 'Detrator'; }
+function formatDateTime(ts) {
+  const d = parseDate(ts);
+  if (!d || isNaN(d)) return '';
+  return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+
+function ago(ts) {
+  const d = parseDate(ts);
+  if (!d || isNaN(d)) return '';
+  const s = (Date.now() - d.getTime()) / 1000;
+  if (s < 60) return `${Math.max(0, Math.floor(s))}s atrás`;
+  if (s < 3600) return `${Math.floor(s/60)}min atrás`;
+  if (s < 86400) return `${Math.floor(s/3600)}h atrás`;
+  return d.toLocaleDateString('pt-BR');
+}
+
+function cls(s) { return Number(s) >= 9 ? 'Promotor' : Number(s) >= 7 ? 'Neutro' : 'Detrator'; }
+function feedType(s) { return Number(s) >= 9 ? 'promotor' : Number(s) >= 7 ? 'neutro' : 'detrator'; }
 
 function buildChart() {
   if (chart) { chart.destroy(); chart = null; }
@@ -152,28 +210,15 @@ function buildChart() {
   });
 
   let labels = [], vals = [];
+  const start = new Date(getStartDate() + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0,0,0,0);
 
-  if (filter === 'ano') {
-    const year = new Date().getFullYear();
-    const currentMonth = new Date().getMonth();
-    for (let m = 0; m <= currentMonth; m++) {
-      const monthKey = `${year}-${String(m+1).padStart(2,'0')}`;
-      labels.push(new Date(year, m, 1).toLocaleDateString('pt-BR',{month:'short'}));
-      let p=0, d=0, t=0;
-      Object.entries(byDate).forEach(([date, v]) => {
-        if (date.startsWith(monthKey)) { p+=v.p; d+=v.d; t+=v.t; }
-      });
-      vals.push(t ? Math.round((p/t - d/t)*100) : null);
-    }
-  } else {
-    const days = filter === '30d' ? 30 : 15;
-    for (let i = days-1; i >= 0; i--) {
-      const day = new Date(); day.setDate(day.getDate()-i);
-      const key = day.toISOString().slice(0,10);
-      labels.push(day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
-      const v = byDate[key];
-      vals.push(v && v.t ? Math.round((v.p/v.t - v.d/v.t)*100) : null);
-    }
+  for (let day = new Date(start); day <= today; day.setDate(day.getDate()+1)) {
+    const key = toDateOnly(day);
+    labels.push(day.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+    const v = byDate[key];
+    vals.push(v && v.t ? Math.round((v.p/v.t - v.d/v.t)*100) : null);
   }
 
   chart = new Chart(ctx, {
@@ -195,11 +240,41 @@ function buildChart() {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        y: { min:-100, max:100, grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#aaa',font:{size:11},callback:v=>v>0?'+'+v:String(v)} },
+        y: { min:-100, max:110, grace:'5%', grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#aaa',font:{size:11},callback:v=>v>0?'+'+v:String(v)} },
         x: { grid:{display:false}, ticks:{color:'#aaa',font:{size:11},maxRotation:0,autoSkip:true,maxTicksLimit:10} }
       }
     }
   });
+}
+
+function renderAlerts(unit) {
+  const relevant = unit ? alerts.filter(a => a.unidade === unit) : alerts;
+  const grouped = {};
+  relevant.forEach(a => {
+    const u = a.unidade || '—';
+    if (!grouped[u]) grouped[u] = { unidade: u, qtd: 0, ultimaNota: null, ultimaData: null };
+    grouped[u].qtd++;
+    const current = parseDate(a.data_avaliacao)?.getTime() || 0;
+    const previous = parseDate(grouped[u].ultimaData)?.getTime() || 0;
+    if (!grouped[u].ultimaData || current > previous) {
+      grouped[u].ultimaNota = a.avaliacao;
+      grouped[u].ultimaData = a.data_avaliacao;
+    }
+  });
+
+  const cards = Object.values(grouped);
+  if (!cards.length) return '';
+
+  return `<div class="alerts">
+    ${cards.map(a => `<div class="alert-card">
+      <div class="alert-icon">⚠</div>
+      <div>
+        <div class="alert-title">Alerta NPS</div>
+        <div class="alert-main">${a.unidade} · nota ${a.ultimaNota}</div>
+        <div class="alert-sub">${a.qtd} avaliação(ões) abaixo de 6 nas últimas 24h · ${ago(a.ultimaData)}</div>
+      </div>
+    </div>`).join('')}
+  </div>`;
 }
 
 function render() {
@@ -226,36 +301,39 @@ function render() {
       <div class="unit-nps" style="color:${color(un)}">${un===null?'—':(un>0?'+':'')+un}</div>
       <div class="unit-count">${t} respostas</div>
       <div class="bar">
-        <div class="bar-p" style="flex:${p}"></div>
-        <div class="bar-n" style="flex:${n2}"></div>
-        <div class="bar-d" style="flex:${d}"></div>
+        <div class="bar-p" style="flex:${p || 0.0001}"></div>
+        <div class="bar-n" style="flex:${n2 || 0.0001}"></div>
+        <div class="bar-d" style="flex:${d || 0.0001}"></div>
       </div>
     </div>`;
   }).join('');
 
-  const feedFiltered = unit ? feed.filter(r => r.unidade === unit) : feed;
+  let feedFiltered = unit ? feed.filter(r => r.unidade === unit) : feed;
+  if (feedFilter) feedFiltered = feedFiltered.filter(r => feedType(r.avaliacao) === feedFilter);
+  const feedTitle = feedFilter === 'detrator' ? 'Últimas respostas · Detratores' : feedFilter === 'neutro' ? 'Últimas respostas · Neutros' : 'Últimas respostas';
 
   document.getElementById('app').innerHTML = `
+    ${renderAlerts(unit)}
     <div class="metrics">
       <div class="card">
         <div class="card-label">NPS Geral</div>
         <div class="card-value" style="color:${color(n)}">${n===null?'—':(n>0?'+':'')+n}</div>
-        <div class="card-sub">${totalR} respostas</div>
+        <div class="card-sub">${totalR} respostas · ${getFilterLabel()}</div>
       </div>
       <div class="card">
         <div class="card-label">Promotores</div>
         <div class="card-value green">${totalP}</div>
         <div class="card-sub">${pct(totalP)}%</div>
       </div>
-      <div class="card">
+      <div class="card clickable ${feedFilter==='neutro'?'filter-active':''}" onclick="setFeedFilter('neutro')" title="Clique para listar apenas neutros">
         <div class="card-label">Neutros</div>
         <div class="card-value yellow">${totalN}</div>
-        <div class="card-sub">${pct(totalN)}%</div>
+        <div class="card-sub">${pct(totalN)}% · clique para filtrar</div>
       </div>
-      <div class="card">
+      <div class="card clickable ${feedFilter==='detrator'?'filter-active':''}" onclick="setFeedFilter('detrator')" title="Clique para listar apenas detratores">
         <div class="card-label">Detratores</div>
         <div class="card-value red">${totalD}</div>
-        <div class="card-sub">${pct(totalD)}%</div>
+        <div class="card-sub">${pct(totalD)}% · clique para filtrar</div>
       </div>
     </div>
     <div class="section-title">Por unidade</div>
@@ -264,16 +342,19 @@ function render() {
       <div class="section-title" style="margin-bottom:12px">Evolução NPS</div>
       <div class="chart-wrap"><canvas id="ch" role="img" aria-label="Evolução NPS">Gráfico NPS.</canvas></div>
     </div>
-    <div class="section-title">Últimas respostas</div>
+    <div class="section-title"><span>${feedTitle}</span>${feedFilter ? '<button class="clear-filter" onclick="clearFeedFilter()">limpar filtro</button>' : ''}</div>
     <div class="feed-box">
       ${feedFiltered.length ? feedFiltered.map(r => {
         const c=cls(r.avaliacao), sc=c==='Promotor'?'sp':c==='Neutro'?'sn':'sd', tg=c==='Promotor'?'tp':c==='Neutro'?'tn':'td';
         return `<div class="feed-item">
           <div class="score-badge ${sc}">${r.avaliacao}</div>
-          <div style="flex:1"><div class="feed-unit">${r.unidade||'—'}</div><div class="feed-time">${ago(r.data_avaliacao)}</div></div>
+          <div style="flex:1">
+            <div class="feed-unit">${r.unidade||'—'}</div>
+            <div class="feed-time">${formatDateTime(r.data_avaliacao)} <span class="feed-date">· ${ago(r.data_avaliacao)}</span></div>
+          </div>
           <span class="tag ${tg}">${c}</span>
         </div>`;
-      }).join('') : '<div class="empty">Sem respostas no período</div>'}
+      }).join('') : `<div class="empty">Sem respostas ${feedFilter ? 'nesse filtro' : 'no período'}</div>`}
     </div>
     <div class="footer">Atualizado às ${new Date().toLocaleTimeString('pt-BR')} · refresh a cada 60s</div>
   `;
@@ -284,6 +365,7 @@ function render() {
 async function load() {
   document.getElementById('app').innerHTML = '<div class="loading">Carregando...</div>';
   const start = getStartDate();
+  const since24h = encodeURIComponent(getSince24h());
   const headers = {
     'apikey': SUPA_KEY,
     'Authorization': `Bearer ${SUPA_KEY}`,
@@ -293,18 +375,23 @@ async function load() {
   };
 
   try {
-    const [r1, r2] = await Promise.all([
+    const [r1, r2, r3] = await Promise.all([
       fetch(`${SUPA_URL}/rest/v1/resumo_nps?data=gte.${start}&order=data.desc`, { headers }),
-      fetch(`${SUPA_URL}/rest/v1/Avaliacoes?select=avaliacao,data_avaliacao,unidade&data_avaliacao=gte.${start}&order=data_avaliacao.desc&limit=20`, { headers })
+      fetch(`${SUPA_URL}/rest/v1/Avaliacoes?select=avaliacao,data_avaliacao,unidade&data_avaliacao=gte.${start}&order=data_avaliacao.desc&limit=500`, { headers }),
+      fetch(`${SUPA_URL}/rest/v1/Avaliacoes?select=avaliacao,data_avaliacao,unidade&avaliacao=lt.6&data_avaliacao=gte.${since24h}&order=data_avaliacao.desc&limit=200`, { headers })
     ]);
 
     if (!r1.ok) throw new Error(`Resumo: HTTP ${r1.status} — Rode o SQL da View no Supabase primeiro`);
     if (!r2.ok) throw new Error(`Feed: HTTP ${r2.status}`);
+    if (!r3.ok) throw new Error(`Alertas: HTTP ${r3.status}`);
 
     resumo = await r1.json();
     feed = await r2.json();
+    alerts = await r3.json();
 
     if (!Array.isArray(resumo)) throw new Error('View resumo_nps não encontrada — rode o SQL no Supabase');
+    if (!Array.isArray(feed)) feed = [];
+    if (!Array.isArray(alerts)) alerts = [];
     render();
   } catch(e) {
     document.getElementById('app').innerHTML = `<div class="error-box">Erro: ${e.message}</div>`;

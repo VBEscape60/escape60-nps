@@ -12,6 +12,11 @@
     .logo-wrap { height: 36px; display: flex; align-items: center; }
     .logo-wrap img { height: 36px; width: auto; object-fit: contain; border-radius: 6px; }
     h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
+    .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .month-nav { display: grid; grid-template-columns: 34px minmax(76px, auto) 34px; align-items: center; border: 1px solid #d0d0c8; border-radius: 999px; background: #fff; overflow: hidden; }
+    .month-nav span { min-width: 76px; padding: 0 8px; color: #1a1a1a; font-size: 12px; font-weight: 700; text-align: center; white-space: nowrap; }
+    .month-btn { width: 34px; height: 34px; border: 0; background: transparent; color: #1a1a1a; font-size: 17px; font-weight: 800; cursor: pointer; }
+    .month-btn:disabled { color: #c8c8c0; cursor: default; }
     .live { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #16a34a; }
     .dot { width: 7px; height: 7px; border-radius: 50%; background: #16a34a; animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
@@ -81,7 +86,14 @@
     </div>
     <h1>Painel NPS</h1>
   </div>
-  <div class="live"><div class="dot"></div>Ao vivo</div>
+  <div class="header-actions">
+    <div class="month-nav" aria-label="Selecionar mes">
+      <button id="prevMonth" class="month-btn" type="button" title="Mes anterior" aria-label="Mes anterior">&lt;</button>
+      <span id="selectedMonth">--</span>
+      <button id="nextMonth" class="month-btn" type="button" title="Proximo mes" aria-label="Proximo mes">&gt;</button>
+    </div>
+    <div class="live"><div class="dot"></div>Ao vivo</div>
+  </div>
 </header>
 
 <div class="filters">
@@ -108,9 +120,52 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const UNITS = ['VO','HS','MO','TT','JD','CA'];
 
 let resumo = [], feed = [], alerts = [], filter = 'dia', feedFilter = null, chart = null;
+let selectedMonth = new Date();
+selectedMonth.setDate(1);
+selectedMonth.setHours(0,0,0,0);
 
 function toDateOnly(d) {
   return d.toISOString().slice(0,10);
+}
+
+function todayStart() {
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function currentMonthStart() {
+  const d = todayStart();
+  d.setDate(1);
+  return d;
+}
+
+function monthLabel(d = selectedMonth) {
+  return d.toLocaleDateString('pt-BR', { month:'short', year:'numeric' }).replace('.', '');
+}
+
+function setMonthlyButtonActive() {
+  document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.btn').forEach(b => {
+    if (b.textContent.trim().toLowerCase().startsWith('mensal')) b.classList.add('active');
+  });
+}
+
+function renderMonthNav() {
+  const current = currentMonthStart();
+  const isAtCurrent = selectedMonth.getFullYear() === current.getFullYear() && selectedMonth.getMonth() === current.getMonth();
+  document.getElementById('selectedMonth').textContent = monthLabel();
+  document.getElementById('nextMonth').disabled = isAtCurrent;
+}
+
+function changeMonth(delta) {
+  selectedMonth.setMonth(selectedMonth.getMonth() + delta);
+  if (selectedMonth > currentMonthStart()) selectedMonth = currentMonthStart();
+  filter = 'mes';
+  feedFilter = null;
+  setMonthlyButtonActive();
+  renderMonthNav();
+  load();
 }
 
 function getStartDate() {
@@ -123,7 +178,7 @@ function getStartDate() {
     return toDateOnly(d);
   }
   if (filter === 'mes') {
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+    return toDateOnly(selectedMonth);
   }
   return toDateOnly(d);
 }
@@ -140,11 +195,33 @@ function getSince24h() {
   return d.toISOString();
 }
 
+function getEndDate() {
+  if (filter === 'mes') {
+    const d = new Date(selectedMonth);
+    d.setMonth(d.getMonth() + 1);
+    return toDateOnly(d);
+  }
+  if (filter === 'dia') {
+    const d = todayStart();
+    d.setDate(d.getDate() + 1);
+    return toDateOnly(d);
+  }
+  return null;
+}
+
+function getFilterLabel() {
+  if (filter === 'dia') return 'Diario';
+  if (filter === 'semana') return 'Semana atual';
+  return monthLabel();
+}
+
 function setFilter(f, el) {
   filter = f;
+  if (filter === 'mes') selectedMonth = currentMonthStart();
   feedFilter = null;
   document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
+  renderMonthNav();
   load();
 }
 
@@ -211,8 +288,9 @@ function buildChart() {
 
   let labels = [], vals = [];
   const start = new Date(getStartDate() + 'T00:00:00');
-  const today = new Date();
-  today.setHours(0,0,0,0);
+  const endDate = getEndDate();
+  const today = endDate ? new Date(endDate + 'T00:00:00') : todayStart();
+  if (endDate) today.setDate(today.getDate() - 1);
 
   for (let day = new Date(start); day <= today; day.setDate(day.getDate()+1)) {
     const key = toDateOnly(day);
@@ -271,7 +349,7 @@ function renderAlerts(unit) {
       <div>
         <div class="alert-title">Alerta NPS</div>
         <div class="alert-main">${a.unidade} · nota ${a.ultimaNota}</div>
-        <div class="alert-sub">${a.qtd} avaliação(ões) abaixo de 6 nas últimas 24h · ${ago(a.ultimaData)}</div>
+        <div class="alert-sub">${a.qtd} avaliação(ões) abaixo de 6 no período · ${ago(a.ultimaData)}</div>
       </div>
     </div>`).join('')}
   </div>`;
@@ -365,7 +443,9 @@ function render() {
 async function load() {
   document.getElementById('app').innerHTML = '<div class="loading">Carregando...</div>';
   const start = getStartDate();
-  const since24h = encodeURIComponent(getSince24h());
+  const end = getEndDate();
+  const endResumo = end ? `&data=lt.${end}` : '';
+  const endFeed = end ? `&data_avaliacao=lt.${end}` : '';
   const headers = {
     'apikey': SUPA_KEY,
     'Authorization': `Bearer ${SUPA_KEY}`,
@@ -376,9 +456,9 @@ async function load() {
 
   try {
     const [r1, r2, r3] = await Promise.all([
-      fetch(`${SUPA_URL}/rest/v1/resumo_nps?data=gte.${start}&order=data.desc`, { headers }),
-      fetch(`${SUPA_URL}/rest/v1/Avaliacoes?select=avaliacao,data_avaliacao,unidade&data_avaliacao=gte.${start}&order=data_avaliacao.desc&limit=500`, { headers }),
-      fetch(`${SUPA_URL}/rest/v1/Avaliacoes?select=avaliacao,data_avaliacao,unidade&avaliacao=lt.6&data_avaliacao=gte.${since24h}&order=data_avaliacao.desc&limit=200`, { headers })
+      fetch(`${SUPA_URL}/rest/v1/resumo_nps?data=gte.${start}${endResumo}&order=data.desc`, { headers }),
+      fetch(`${SUPA_URL}/rest/v1/Avaliacoes?select=avaliacao,data_avaliacao,unidade&data_avaliacao=gte.${start}${endFeed}&order=data_avaliacao.desc&limit=500`, { headers }),
+      fetch(`${SUPA_URL}/rest/v1/Avaliacoes?select=avaliacao,data_avaliacao,unidade&avaliacao=lt.6&data_avaliacao=gte.${start}${endFeed}&order=data_avaliacao.desc&limit=200`, { headers })
     ]);
 
     if (!r1.ok) throw new Error(`Resumo: HTTP ${r1.status} — Rode o SQL da View no Supabase primeiro`);
@@ -398,6 +478,9 @@ async function load() {
   }
 }
 
+document.getElementById('prevMonth').addEventListener('click', () => changeMonth(-1));
+document.getElementById('nextMonth').addEventListener('click', () => changeMonth(1));
+renderMonthNav();
 load();
 setInterval(load, 60000);
 </script>
